@@ -30,9 +30,9 @@ def init():
                         'salt_b_b': salt_b_b
                     }
                 },
-                'yubikey': {
+                'YubiKey': {
                     'API_KEY': {
-                        'client_id': 0,
+                        'client_id': '<Client ID>',
                         'secret_key': '<Secret key>',
                     }
                 }
@@ -54,24 +54,24 @@ def init():
             }
         }
     }
-    with open(ACCOUNT_DATA_FILE, "w") as dump_f:
-        json.dump(new_data, dump_f)
+    with open(ACCOUNT_DATA_FILE, "w") as dump_file:
+        json.dump(new_data, dump_file)
 
-    with open(ACCOUNT_DATA_FILE, 'r') as load_f:
-        load_data = json.load(load_f)
+    with open(ACCOUNT_DATA_FILE, 'r') as load_file:
+        load_data = json.load(load_file)
     print(load_data['config']['login']['password']['salt']['salt_a_a'])
 
 
-def create_user(id, name, password):
+def create_user(user_id, name, password):
     from hash_encrypt import hash_encrypt
     with open(ACCOUNT_DATA_FILE, 'r') as load_f:
         load_data = json.load(load_f)
     new_data = load_data
-    new_data['data'][str(id)] = {
+    new_data['data'][str(user_id)] = {
         'name': name,
         'login': {
             'LoginMethod': {
-                'password': hash_encrypt(id, password)
+                'password': hash_encrypt(user_id, password)
             },
             'LoginPolicy': {
                 'MultiFactor': False
@@ -82,7 +82,7 @@ def create_user(id, name, password):
         json.dump(new_data, dump_f)
 
 
-class account(object):
+class Account(object):
 
     logged_in = False
     user_id = -1
