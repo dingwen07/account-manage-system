@@ -5,12 +5,13 @@ from yubico_client import Yubico
 
 ACCOUNT_DATA_FILE = 'account.json'
 
-with open(ACCOUNT_DATA_FILE, 'r') as load_file:
-    load_data = json.load(load_file)
-    client_id = load_data['config']['login']['YubiKey']['API_KEY']['client_id']
-    secret_key = load_data['config']['login']['YubiKey']['API_KEY']['secret_key']
-    client = Yubico(client_id, secret_key)
-
+try:
+    with open(ACCOUNT_DATA_FILE, 'r') as load_file:
+        load_data = json.load(load_file)
+        client_id = load_data['config']['login']['YubiKey']['API_KEY']['client_id']
+        secret_key = load_data['config']['login']['YubiKey']['API_KEY']['secret_key']
+except:
+    pass
 
 def __get_identity(otp_code):
     return otp_code[0:12]
