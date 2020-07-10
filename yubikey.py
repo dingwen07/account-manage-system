@@ -8,8 +8,9 @@ ACCOUNT_DATA_FILE = 'account.json'
 try:
     with open(ACCOUNT_DATA_FILE, 'r') as load_file:
         load_data = json.load(load_file)
-        client_id = load_data['config']['login']['YubiKey']['API_KEY']['client_id']
-        secret_key = load_data['config']['login']['YubiKey']['API_KEY']['secret_key']
+        client_id = load_data['config']['login']['LoginMethod']['YubiKey']['API_KEY']['client_id']
+        secret_key = load_data['config']['login']['LoginMethod']['YubiKey']['API_KEY']['secret_key']
+        client = Yubico(client_id, secret_key)
 except:
     pass
 

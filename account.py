@@ -20,27 +20,21 @@ def init(default_admin_password: str):
     new_data = {
         'config': {
             'login': {
-                'GlobalLoginPolicy': {
-                    'AllowPasswordlessLogin': False,
-                    'RequireMultiFactor': False,
-                    'LoginMethod': {
-                        'password': 4,
-                        'YubiKey': 1,
-                        'TOTP': 0
-                    }
-                },
-                'password': {
-                    'salt': {
-                        'salt_a_a': salt_a_a,
-                        'salt_a_b': salt_a_b,
-                        'salt_b_a': salt_b_a,
-                        'salt_b_b': salt_b_b
-                    }
-                },
-                'YubiKey': {
-                    'API_KEY': {
-                        'client_id': '<Client ID>',
-                        'secret_key': '<Secret key>',
+                'GlobalLoginPolicy': [('password', 'requisite'), ('YubiKey', 'optional'), ('TOTP', 'optional')],
+                'LoginMethod': {
+                    'password': {
+                        'salt': {
+                            'salt_a_a': salt_a_a,
+                            'salt_a_b': salt_a_b,
+                            'salt_b_a': salt_b_a,
+                            'salt_b_b': salt_b_b
+                        }
+                    },
+                    'YubiKey': {
+                        'API_KEY': {
+                            'client_id': '<Client ID>',
+                            'secret_key': '<Secret key>',
+                        }
                     }
                 }
             },
@@ -55,13 +49,7 @@ def init(default_admin_password: str):
                         'YubiKey': default_admin_yubikey,
                         'TOTP': None,
                     },
-                    'LoginPolicy': {
-                        'LoginMethod': {
-                            'password': 4,
-                            'YubiKey': 1,
-                            'TOTP': 0
-                        }
-                    }
+                    'LoginPolicy': [('password', 'requisite'), ('YubiKey', 'optional'), ('TOTP', 'optional')]
                 },
                 'status': [0, None, None]
             }
@@ -82,7 +70,7 @@ def create_user(username: str, pwd: str) -> int:
     with open(ACCOUNT_DATA_FILE, 'r') as load_file:
         load_data = json.load(load_file)
     user_id = load_data['config']['NextUserID']
-    method_policy = load_data['config']['login']['GlobalLoginPolicy']['LoginMethod']
+    method_policy = load_data['config']['login']['GlobalLoginPolicy']
     new_data = load_data
     new_data['data'][str(user_id)] = {
         'username': username,
@@ -92,13 +80,7 @@ def create_user(username: str, pwd: str) -> int:
                 'YubiKey': [],
                 'TOTP': None
             },
-            'LoginPolicy': {
-                'LoginMethod': {
-                    'password': method_policy['password'],
-                    'YubiKey': method_policy['YubiKey'],
-                    'TOTP': method_policy['TOTP']
-                }
-            }
+            'LoginPolicy': method_policy
         },
         'status': [0, None, None]
     }
@@ -123,9 +105,36 @@ class Account(object):
 
     logged_in = False
     user_id = -1
+    login_codes = []
 
-    def __init__(self):
-        pass
+    def __init__(self, user_id):
+        self.user_id = user_id
+
+    def login(self):
+        if self.logged_in:
+            return True
+        else:
+            with open(ACCOUNT_DATA_FILE, 'r') as load_file:
+                load_data = json.load(load_file)
+            if len(self.login_codes) >= len(load_data['data'][str(self.user_id)]['login']['LoginPolicy']):
+                for method in load_data['data'][str(self.user_id)]['login']['LoginPolicy']:
+                    if method[0] == 'password':
+                        authenticator = authenticate.PasswordAuthenticator(self.user_id)
+                    elif method[0] == 'YubiKey':
+                        authenticator = authenticate.YubiKeyAuthenticator(self.user_id)
+                    else:
+                        authenticator = authenticate.FalseAuthenticator()
+                    if authenticator.authenticate(self.login_codes.pop(0)):
+                        if method[1] == 'sufficient':
+                            self.logged_in = True
+                            return True
+                    else:
+                        if method[1] == 'required' or method[1] == 'requisite':
+                            return False
+                self.logged_in = True
+                return True
+            else:
+                return False
 
 
 if __name__ == "__main__":
@@ -136,7 +145,7 @@ if __name__ == "__main__":
         password.change_password(0, pwd)
     else:
         print('Sorry, passwords do not match')
-    
+
     print()
     print('TEST')
     pwd = getpass.getpass('Enter new password:')
@@ -144,5 +153,12 @@ if __name__ == "__main__":
         print(create_user('TEST', pwd))
     else:
         print('Sorry, passwords do not match')
-    '''
+
     print(get_user_id('TEST'))
+    '''
+    from account import Account
+    a = Account(0)
+    a.login_codes = ['admin', 'cccccciittvfveinbfunfnteijjevkehntltngjbdrle', 'sssss']
+    a.login()
+    print(a.logged_in)
+
